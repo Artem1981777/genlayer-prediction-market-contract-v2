@@ -16,7 +16,7 @@ This audit covers the standalone Intelligent Contract in `contracts/prediction_m
 
 **Risk:** An unresolved event could leave stakers unable to recover funds.
 
-**Mitigation:** `resolve()` changes status to `resolved` only for `YES` or `NO`. For `UNRESOLVED`, it keeps `status == "open"`, appends an audit entry, and allows the creator to retry. The creator can call `void()` while the outcome is `UNRESOLVED`; stakers can then recover their recorded positions through `refund()`.
+**Mitigation:** `resolve()` changes status to `resolved` only for `YES` or `NO`. For `UNRESOLVED`, it keeps `status == "open"`, appends an audit entry, and allows the creator to retry. Each unresolved attempt records a deterministic transaction timestamp and sets a one-day `resolve_deadline`. Before that deadline the creator can call `void()`; after it elapses, any caller can void an unresolved open/disputed market so stakers can recover their recorded positions through `refund()`.
 
 The same invariant is enforced after a dispute. If `resolve_dispute()` produces `UNRESOLVED`, status remains `disputed`, so the creator can retry the disputed resolution instead of being permanently forced into a terminal state.
 
@@ -52,8 +52,8 @@ The same invariant is enforced after a dispute. If `resolve_dispute()` produces 
 
 ## Residual risks
 
-The final outcome remains dependent on the creator's question, rules, and source selection. A poorly specified market can produce a poor but consensus-valid result. The contract does not implement an automatic wall-clock maturity deadline; the creator authorization guard is the objective resolution guard for this version. If the creator never retries an unresolved event or calls `void()`, availability depends on creator action.
+The final outcome remains dependent on the creator's question, rules, and source selection. A poorly specified market can produce a poor but consensus-valid result. The deadline is measured from the last unresolved transaction using GenLayer's deterministic transaction timestamp, not host wall-clock time or block height. If the deadline has not elapsed, availability still depends on creator action; after it elapses, the permissionless void escape is available.
 
 ## Verification plan
 
-Run `npm run lint` for official GenVM lint and semantic validation. Run `npm run simulate` for deterministic checks covering non-creator rejection, duplicate-source rejection, creator resolution, retryable `UNRESOLVED`, retryable disputed `UNRESOLVED`, repeated resolution, non-creator void rejection, and creator void. The manual deployment workflow verifies a successful Bradbury execution result and uploads the exact deployed source, address, transaction hash, and SHA-256 digest together.
+Run `npm run lint` for official GenVM lint and semantic validation. Run `npm run simulate` for deterministic checks covering non-creator rejection, duplicate-source rejection, creator resolution, retryable `UNRESOLVED`, retryable disputed `UNRESOLVED`, pre-deadline permissionless-void rejection, post-deadline permissionless void, repeated resolution, and replay rejection. The manual deployment workflow verifies a successful Bradbury execution result and uploads the exact deployed source, address, transaction hash, and SHA-256 digest together.

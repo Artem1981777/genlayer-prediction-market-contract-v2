@@ -13,13 +13,16 @@ The resolver has two explicit protections required for safe lifecycle management
 
 The same rule applies after a dispute: if `resolve_dispute()` returns `UNRESOLVED`, the market remains `disputed` and the creator can retry the dispute resolution or void the market. Source URLs are also unique within a market, preventing one endpoint from being counted multiple times.
 
+Every unresolved resolution attempt records `last_resolve_at` and a one-day `resolve_deadline` using GenLayer's deterministic transaction timestamp. Before the deadline, only the creator can call `void()`. After the deadline, anyone can call `void()` on an unresolved open/disputed market, giving stakers a permissionless escape if the creator disappears. This uses transaction time, not a block-number API; GenLayer does not expose block height in contract context.
+
 A definitive `YES` or `NO` result changes the status to `resolved`. The creator can then call `settle()`, after which winning stakers can call `claim()`.
 
 ```text
 open --resolve(YES/NO)--> resolved --settle--> settled --claim--> paid
   |                             |
   |-- resolve(UNRESOLVED) ------|  retryable while open
-  |-- void --------------------> voided --refund--> returned
+  |-- deadline + anyone void --> voided --refund--> returned
+  |-- creator void ------------> voided --refund--> returned
 ```
 
 The contract records the question and rules hashes, resolution history, source provenance through the consensus prompt, dispute rounds, positions, claims, and payout information. Web pages and dispute text are treated as untrusted data, never as instructions.
