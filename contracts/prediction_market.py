@@ -2,6 +2,9 @@
 from genlayer import *
 import json
 import hashlib
+from datetime import datetime
+
+RESOLUTION_TIMEOUT_SECONDS = 86400
 # EVM interface used only to send native GEN to an address (external message, on finalization)
 @gl.evm.contract_interface
 class _NativeRecipient:
@@ -29,6 +32,8 @@ class PredictionMarketResolver(gl.Contract):
     positions: str
     claims: str
     history: str
+    last_resolve_at: u256
+    resolve_deadline: u256
     def __init__(self, question: str, rules: str, source1: str, source2: str, source3: str, market_id: str):
         self.market_id = market_id.strip() if market_id.strip() else "market-1"
         self.creator = str(gl.message.sender_address)
@@ -49,6 +54,11 @@ class PredictionMarketResolver(gl.Contract):
         self.positions = "{}"
         self.claims = "{}"
         self.history = "[]"
+        self.last_resolve_at = self._now()
+        self.resolve_deadline = self.last_resolve_at + RESOLUTION_TIMEOUT_SECONDS
+    def _now(self) -> u256:
+        raw = str(gl.message_raw["datetime"])
+        return u256(int(datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp()))
     def _load_json(self, raw: str, default):
         try:
             return json.loads(raw)
@@ -85,7 +95,7 @@ class PredictionMarketResolver(gl.Contract):
     @gl.public.view
     def get_state(self) -> dict:
         yes_pool, no_pool = self._pools()
-        return {"market_id": self.market_id, "creator": self.creator, "question": self.question, "rules": self.rules, "source1": self.source1, "source2": self.source2, "source3": self.source3, "question_hash": self.question_hash, "rules_hash": self.rules_hash, "status": self.status, "outcome": self.outcome, "rationale": self.rationale, "dispute_note": self.dispute_note, "dispute_outcome": self.dispute_outcome, "winning_side": self.winning_side, "settled_outcome": self.settled_outcome, "yes_pool": yes_pool, "no_pool": no_pool, "total_pool": yes_pool + no_pool, "positions": self.positions, "claims": self.claims, "history": self.history}
+        return {"market_id": self.market_id, "creator": self.creator, "question": self.question, "rules": self.rules, "source1": self.source1, "source2": self.source2, "source3": self.source3, "question_hash": self.question_hash, "rules_hash": self.rules_hash, "status": self.status, "outcome": self.outcome, "rationale": self.rationale, "dispute_note": self.dispute_note, "dispute_outcome": self.dispute_outcome, "winning_side": self.winning_side, "settled_outcome": self.settled_outcome, "last_resolve_at": self.last_resolve_at, "resolve_deadline": self.resolve_deadline, "yes_pool": yes_pool, "no_pool": no_pool, "total_pool": yes_pool + no_pool, "positions": self.positions, "claims": self.claims, "history": self.history}
     @gl.public.view
     def verify_question(self, q: str) -> bool:
         return hashlib.sha256(q.encode("utf-8")).hexdigest() == self.question_hash
@@ -171,6 +181,8 @@ class PredictionMarketResolver(gl.Contract):
             self.status = "resolved"
         else:
             self.status = "open"
+            self.last_resolve_at = self._now()
+            self.resolve_deadline = self.last_resolve_at + RESOLUTION_TIMEOUT_SECONDS
         self._append_history("initial", caller, "")
     @gl.public.write
     def dispute(self, reason: str):
@@ -199,6 +211,9 @@ class PredictionMarketResolver(gl.Contract):
         # An unresolved re-check must remain retryable instead of marooning
         # the market in a non-retryable resolved state.
         self.status = "disputed" if self.outcome == "UNRESOLVED" else "resolved"
+        if self.outcome == "UNRESOLVED":
+            self.last_resolve_at = self._now()
+            self.resolve_deadline = self.last_resolve_at + RESOLUTION_TIMEOUT_SECONDS
         self._append_history("resolve_dispute", caller, self.dispute_note)
     @gl.public.write
     def settle(self):
@@ -214,9 +229,11 @@ class PredictionMarketResolver(gl.Contract):
     @gl.public.write
     def void(self):
         caller = str(gl.message.sender_address)
-        assert caller == self.creator, "Only the market creator can void"
         assert self.status in ("open", "resolved", "disputed"), "Can only void an open, disputed or resolved market"
         assert self.outcome == "UNRESOLVED", "Only an UNRESOLVED market can be voided"
+        if caller != self.creator:
+            assert self.status in ("open", "disputed"), "Only an open or disputed market can be permissionlessly voided"
+            assert self._now() >= self.resolve_deadline, "Resolution deadline has not elapsed"
         self.winning_side = ""
         self.status = "voided"
         self.claims = "{}"

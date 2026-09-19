@@ -5,7 +5,12 @@ This is not a replacement for a Bradbury deployment. It isolates the contract's
 lifecycle guards and consensus outcome handling with deterministic web/LLM mocks.
 """
 import json
+import time
+from datetime import datetime, timezone
 from pathlib import Path
+
+SIM_TIME = [1_000]
+time.time = lambda: SIM_TIME[0]
 
 class Return:
     def __init__(self, calldata): self.calldata = calldata
@@ -45,14 +50,16 @@ class Gl:
     def __init__(self):
         self.public = Public(); self.evm = Evm(); self.eq_principle = Eq()
         self.nondet = Nondet(); self.message = Message()
+        self.message_raw = {"datetime": "1970-01-01T00:16:40+00:00"}
         self.Contract = object
 
 GL = Gl()
 source = Path(__file__).parent.joinpath("contracts/prediction_market.py").read_text()
 source = source.replace("from genlayer import *", "gl = GL", 1)
-namespace = {"GL": GL, "gl": GL, "__name__": "prediction_market_under_test"}
+namespace = {"GL": GL, "gl": GL, "u256": int, "__name__": "prediction_market_under_test"}
 exec(compile(source, "contracts/prediction_market.py", "exec"), namespace)
 Contract = namespace["PredictionMarketResolver"]
+TIMEOUT = namespace["RESOLUTION_TIMEOUT_SECONDS"]
 
 checks = []
 def check(condition, label):
@@ -61,6 +68,7 @@ def check(condition, label):
 
 def call_as(contract, sender, method, *args):
     GL.message.sender_address = sender
+    GL.message_raw["datetime"] = datetime.fromtimestamp(SIM_TIME[0], timezone.utc).isoformat()
     try:
         getattr(contract, method)(*args)
         return None
@@ -87,9 +95,12 @@ check(err is None, "creator can retry resolve after UNRESOLVED")
 check(state["status"] == "open", "retryable UNRESOLVED remains open")
 
 err = call_as(c, "0xOTHER", "void")
-check(err is not None and "creator" in str(err).lower(), "non-creator void is rejected")
+check(err is not None and "deadline" in str(err).lower(), "non-creator void is blocked before deadline")
+SIM_TIME[0] += TIMEOUT
+err = call_as(c, "0xOTHER", "void")
+check(err is None and c.get_state()["status"] == "voided", "anyone can void after deadline")
 err = call_as(c, "0xCREATOR", "void")
-check(err is None and c.get_state()["status"] == "voided", "creator can void unsettled market")
+check(err is not None, "void cannot be replayed after deadline escape")
 
 # A dispute re-check that is still UNRESOLVED must remain retryable too.
 GL.nondet = Nondet(["YES", "UNRESOLVED", "UNRESOLVED"])
