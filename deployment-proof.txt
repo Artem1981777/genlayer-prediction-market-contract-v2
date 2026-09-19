@@ -1,10 +1,12 @@
 PredictionMarketResolver contract-only deployment
 network: GenLayer Testnet Bradbury
-contract: 0x8F4F6E3f82247Fe5A373a7ac476bF68C96d44A80
-deploy tx: 0x167535d2848f1fea39c837776333559ff69327720e1716d020ec7aaaa0139eb5
+contract: 0x50C9648Aa527890C52dD36bb5f67336df4cEB640
+deploy tx: 0xa04dc3752619fd593f98e7c2f713908018abd0cb02bffff6908eed04306aed44
 execution result: FINISHED_WITH_RETURN
 source file: contracts/prediction_market.py
-source bytes: 13685 UTF-8
-source sha256: 9dcdb2035299a3e537afde0dfc3389176de0090adeb11c46140f254f016e8faa
-explorer: https://explorer-bradbury.genlayer.com/address/0x8F4F6E3f82247Fe5A373a7ac476bF68C96d44A80
-transaction explorer: https://explorer-bradbury.genlayer.com/tx/0x167535d2848f1fea39c837776333559ff69327720e1716d020ec7aaaa0139eb5
+source bytes: 14660 UTF-8
+source sha256: 324cf4d786cd24e89929e07771de140ef2c0a757b1f130a28dc2ba49f8171f5a
+explorer: https://explorer-bradbury.genlayer.com/address/0x50C9648Aa527890C52dD36bb5f67336df4cEB640
+transaction explorer: https://explorer-bradbury.genlayer.com/tx/0xa04dc3752619fd593f98e7c2f713908018abd0cb02bffff6908eed04306aed44
+workflow: https://github.com/Artem1981777/genlayer-prediction-market-contract-v2/actions/runs/35470351889
+commit: 6798b6043a8d98c8c80283b35721d4691ca5c772

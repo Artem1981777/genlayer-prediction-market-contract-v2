@@ -2,7 +2,7 @@
 
 `PredictionMarketResolver` is a standalone GenLayer Intelligent Contract for resolving a YES/NO prediction market from live web evidence and settling stakes through an on-chain lifecycle. This repository contains **only the contract and verification/deployment tooling**. It intentionally contains no user-facing `index.html`, frontend, or prediction-market application interface.
 
-**Verified Bradbury deployment:** contract [`0xA4d5575aC2c91E1aE44B6246b1654148e56fa31c`](https://explorer-bradbury.genlayer.com/address/0xA4d5575aC2c91E1aE44B6246b1654148e56fa31c), deployed by transaction [`0x2fc3cb7597e3491b16e42308f1ddcfac639d5f3925f91016f7ef1d70f75c3d0d`](https://explorer-bradbury.genlayer.com/tx/0x2fc3cb7597e3491b16e42308f1ddcfac639d5f3925f91016f7ef1d70f75c3d0d). The deployed source is `13,685` UTF-8 bytes with SHA-256 `9dcdb2035299a3e537afde0dfc3389176de0090adeb11c46140f254f016e8faa`.
+**Verified final Bradbury deployment:** contract [`0x50C9648Aa527890C52dD36bb5f67336df4cEB640`](https://explorer-bradbury.genlayer.com/address/0x50C9648Aa527890C52dD36bb5f67336df4cEB640), deployed by transaction [`0xa04dc3752619fd593f98e7c2f713908018abd0cb02bffff6908eed04306aed44`](https://explorer-bradbury.genlayer.com/tx/0xa04dc3752619fd593f98e7c2f713908018abd0cb02bffff6908eed04306aed44). The deployed source is `14,660` UTF-8 bytes with SHA-256 `324cf4d786cd24e89929e07771de140ef2c0a757b1f130a28dc2ba49f8171f5a`.
 
 ## Lifecycle correction
 
@@ -26,20 +26,6 @@ open --resolve(YES/NO)--> resolved --settle--> settled --claim--> paid
 ```
 
 The contract records the question and rules hashes, resolution history, source provenance through the consensus prompt, dispute rounds, positions, claims, and payout information. Web pages and dispute text are treated as untrusted data, never as instructions.
-
-
-## Live proof (resolve() guard + retryable UNRESOLVED, Bradbury)
-
-Dedicated proof market deployed from the exact same `contracts/prediction_market.py` to demonstrate the reviewer-requested lifecycle guard on-chain, independent of the canonical submission deployment above.
-
-- Proof contract: `0xBaACbcA084194912C26d65e0405B1275F1d4A750`
-- deploy: `0x64aff8201c5c52900eb1e0fbf4dad8433fbc2c1aac56a64988df851b1dc52a3d`
-- resolve #1 (creator) -> UNRESOLVED, market stays `open`: `0x4a65943a12ca6aa2046ed781e3b65dd51a85fa761d742da896b5ef6887820cae`
-- resolve #2 (creator, retry) -> UNRESOLVED again, still `open`: `0x56c31b7152943ad0353b83f0e56c467a7f03355b2e68cf3c0ae4c86333bf6398`
-- resolve (non-creator) -> reverts, 5/5 validators AGREE on FINISHED_WITH_ERROR: `0xbb5a2f4ef5c12cfe4e5e639040eaba27b7b37ae3616116b9ee21aa50acea1b88`
-
-Explorer: https://explorer-bradbury.genlayer.com/address/0xBaACbcA084194912C26d65e0405B1275F1d4A750
-
 ## Consensus design
 
 `resolve()` fetches the configured sources through `gl.nondet.web.render` and constructs a neutral prompt containing the question, rules, and bounded evidence. The decision runs under `gl.eq_principle.prompt_comparative`. Validators must agree on the final outcome value: `YES`, `NO`, or `UNRESOLVED`. Failed source fetches are explicitly excluded from evidence, and prompt injection text is marked as untrusted.
@@ -52,7 +38,7 @@ assert caller == self.creator, "Only the market creator can resolve"
 assert self.status == "open", "Market already resolved"
 ```
 
-After consensus, only `YES` or `NO` closes the market. `UNRESOLVED` writes an audit-history entry but restores/keeps the market in `open`, making another resolution attempt possible.
+After consensus, only `YES` or `NO` closes the market. `UNRESOLVED` writes an audit-history entry but keeps initial resolution `open` or dispute re-check `disputed`, making another resolution attempt possible until the deadline escape is used.
 
 ## Contract API
 
@@ -69,9 +55,9 @@ npm run simulate
 node --check deploy.mjs
 ```
 
-`npm run lint` runs the official GenVM AST and semantic validation. `npm run simulate` exercises the contract lifecycle with deterministic mocks, including creator-only resolution, retryable `UNRESOLVED`, a second allowed resolution attempt, and the creator-only void escape.
+`npm run lint` runs the official GenVM AST and semantic validation. `npm run simulate` exercises the contract lifecycle with deterministic mocks, including creator-only resolution, duplicate-source rejection, retryable initial and disputed `UNRESOLVED`, pre-deadline permissionless-void rejection, post-deadline permissionless void, a second allowed resolution attempt, and replay rejection.
 
-The CI workflow runs lint, Python syntax checks, lifecycle simulation, and JavaScript syntax checks on every push and pull request. A manually triggered deployment job uses the repository secret `GENLAYER_PRIVATE_KEY`, deploys the exact checked-out `contracts/prediction_market.py`, verifies the final execution result, and uploads the contract address, transaction hash, source copy, and SHA-256 digest as one matching artifact.
+The CI workflow runs lint, Python syntax checks, lifecycle simulation, and JavaScript syntax checks on every push and pull request. A manually triggered deployment job uses the repository secret `GENLAYER_PRIVATE_KEY`, deploys the exact checked-out `contracts/prediction_market.py`, verifies the final execution result, and uploads the contract address, transaction hash, source copy, and SHA-256 digest as one matching artifact. The final deployment was validated in [workflow run 35470351889](https://github.com/Artem1981777/genlayer-prediction-market-contract-v2/actions/runs/35470351889).
 
 ## Deployment
 
