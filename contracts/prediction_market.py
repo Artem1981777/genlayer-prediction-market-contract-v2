@@ -134,6 +134,7 @@ class PredictionMarketResolver(gl.Contract):
         assert caller == self.creator, "Only the market creator can add a source"
         assert self.status == "open", "Market already resolved"
         assert url.startswith("http://") or url.startswith("https://"), "Source must be an http(s) URL"
+        assert url not in (self.source1, self.source2, self.source3), "Duplicate source is not allowed"
         assert self.source1 == "" or self.source2 == "" or self.source3 == "", "All three source slots are already set"
         if self.source1 == "":
             self.source1 = url
@@ -195,7 +196,9 @@ class PredictionMarketResolver(gl.Contract):
             self.dispute_outcome = "OVERTURNED"
         else:
             self.dispute_outcome = "UPHELD"
-        self.status = "resolved"
+        # An unresolved re-check must remain retryable instead of marooning
+        # the market in a non-retryable resolved state.
+        self.status = "disputed" if self.outcome == "UNRESOLVED" else "resolved"
         self._append_history("resolve_dispute", caller, self.dispute_note)
     @gl.public.write
     def settle(self):
@@ -212,7 +215,7 @@ class PredictionMarketResolver(gl.Contract):
     def void(self):
         caller = str(gl.message.sender_address)
         assert caller == self.creator, "Only the market creator can void"
-        assert self.status in ("open", "resolved"), "Can only void an open or resolved market"
+        assert self.status in ("open", "resolved", "disputed"), "Can only void an open, disputed or resolved market"
         assert self.outcome == "UNRESOLVED", "Only an UNRESOLVED market can be voided"
         self.winning_side = ""
         self.status = "voided"

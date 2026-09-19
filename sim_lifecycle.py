@@ -30,8 +30,12 @@ class Web:
         return "Ethereum completed The Merge and uses Proof-of-Stake."
 
 class Nondet:
-    def __init__(self): self.web = Web()
-    def exec_prompt(self, _prompt): return '{"outcome":"UNRESOLVED"}'
+    def __init__(self, outcomes=None):
+        self.web = Web()
+        self.outcomes = list(outcomes or ["UNRESOLVED"])
+    def exec_prompt(self, _prompt):
+        outcome = self.outcomes.pop(0) if self.outcomes else "UNRESOLVED"
+        return json.dumps({"outcome": outcome})
 
 class Message:
     sender_address = "0xCREATOR"
@@ -68,6 +72,9 @@ c = Contract("Has Ethereum completed The Merge?", "YES if the source says it com
 err = call_as(c, "0xOTHER", "resolve")
 check(err is not None and "creator" in str(err).lower(), "non-creator resolve is rejected")
 
+err = call_as(c, "0xCREATOR", "add_source", "https://example.com/source")
+check(err is not None and "duplicate" in str(err).lower(), "duplicate source is rejected")
+
 err = call_as(c, "0xCREATOR", "resolve")
 state = c.get_state()
 check(err is None, "creator resolve executes")
@@ -83,6 +90,18 @@ err = call_as(c, "0xOTHER", "void")
 check(err is not None and "creator" in str(err).lower(), "non-creator void is rejected")
 err = call_as(c, "0xCREATOR", "void")
 check(err is None and c.get_state()["status"] == "voided", "creator can void unsettled market")
+
+# A dispute re-check that is still UNRESOLVED must remain retryable too.
+GL.nondet = Nondet(["YES", "UNRESOLVED", "UNRESOLVED"])
+c2 = Contract("Dispute retry?", "YES if settled; otherwise UNRESOLVED.", "https://example.com/dispute", "", "", "sim-2")
+call_as(c2, "0xCREATOR", "resolve")
+check(c2.get_state()["status"] == "resolved", "definitive result enters resolved state")
+call_as(c2, "0xOTHER", "dispute", "Please re-check")
+check(c2.get_state()["status"] == "disputed", "dispute enters disputed state")
+err = call_as(c2, "0xCREATOR", "resolve_dispute")
+check(err is None and c2.get_state()["status"] == "disputed", "UNRESOLVED dispute re-check stays retryable")
+err = call_as(c2, "0xCREATOR", "resolve_dispute")
+check(err is None and c2.get_state()["status"] == "disputed", "retryable disputed re-check can run again")
 
 failed = sum(1 for ok in checks if not ok)
 print(f"CHECKS: {len(checks)}  PASSED: {len(checks) - failed}  FAILED: {failed}")
