@@ -11,6 +11,8 @@ The resolver has two explicit protections required for safe lifecycle management
 1. `resolve()` is creator-guarded. Only the market creator can trigger a resolution attempt.
 2. `UNRESOLVED` is retryable. When validators conclude that the event has not settled, sources are insufficient, or evidence conflicts, the contract keeps `status == "open"`. The creator can retry `resolve()` or call `void()` so stakers can recover their funds through `refund()`.
 
+The same rule applies after a dispute: if `resolve_dispute()` returns `UNRESOLVED`, the market remains `disputed` and the creator can retry the dispute resolution or void the market. Source URLs are also unique within a market, preventing one endpoint from being counted multiple times.
+
 A definitive `YES` or `NO` result changes the status to `resolved`. The creator can then call `settle()`, after which winning stakers can call `claim()`.
 
 ```text

@@ -18,6 +18,8 @@ This audit covers the standalone Intelligent Contract in `contracts/prediction_m
 
 **Mitigation:** `resolve()` changes status to `resolved` only for `YES` or `NO`. For `UNRESOLVED`, it keeps `status == "open"`, appends an audit entry, and allows the creator to retry. The creator can call `void()` while the outcome is `UNRESOLVED`; stakers can then recover their recorded positions through `refund()`.
 
+The same invariant is enforced after a dispute. If `resolve_dispute()` produces `UNRESOLVED`, status remains `disputed`, so the creator can retry the disputed resolution instead of being permanently forced into a terminal state.
+
 ### F3 — Prompt injection in web evidence
 
 **Risk:** A cited page may contain text that attempts to override the resolver prompt.
@@ -42,10 +44,16 @@ This audit covers the standalone Intelligent Contract in `contracts/prediction_m
 
 **Mitigation:** `claims` records the caller's consumed position. Both `claim()` and `refund()` reject a caller with an existing claimed record.
 
+### F7 — Duplicate source weighting
+
+**Risk:** The creator could configure the same endpoint in multiple source slots, giving one endpoint disproportionate influence.
+
+**Mitigation:** `add_source()` rejects a URL already present in any source slot. The constructor's three source arguments remain part of the immutable market record; callers should provide distinct URLs when deploying.
+
 ## Residual risks
 
 The final outcome remains dependent on the creator's question, rules, and source selection. A poorly specified market can produce a poor but consensus-valid result. The contract does not implement an automatic wall-clock maturity deadline; the creator authorization guard is the objective resolution guard for this version. If the creator never retries an unresolved event or calls `void()`, availability depends on creator action.
 
 ## Verification plan
 
-Run `npm run lint` for official GenVM lint and semantic validation. Run `npm run simulate` for deterministic checks covering non-creator rejection, creator resolution, retryable `UNRESOLVED`, repeated resolution, non-creator void rejection, and creator void. The manual deployment workflow verifies a successful Bradbury execution result and uploads the exact deployed source, address, transaction hash, and SHA-256 digest together.
+Run `npm run lint` for official GenVM lint and semantic validation. Run `npm run simulate` for deterministic checks covering non-creator rejection, duplicate-source rejection, creator resolution, retryable `UNRESOLVED`, retryable disputed `UNRESOLVED`, repeated resolution, non-creator void rejection, and creator void. The manual deployment workflow verifies a successful Bradbury execution result and uploads the exact deployed source, address, transaction hash, and SHA-256 digest together.
