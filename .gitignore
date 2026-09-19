@@ -4,3 +4,5 @@ contract.txt
 deploy-tx.txt
 deployment-artifacts/
 contracts/__pycache__/
+*.log
+proof-output.json

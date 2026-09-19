@@ -2,7 +2,7 @@
 
 `PredictionMarketResolver` is a standalone GenLayer Intelligent Contract for resolving a YES/NO prediction market from live web evidence and settling stakes through an on-chain lifecycle. This repository contains **only the contract and verification/deployment tooling**. It intentionally contains no user-facing `index.html`, frontend, or prediction-market application interface.
 
-**Verified Bradbury deployment:** contract [`0xeB960bA5aDAF1F6A1DEBA19964B20434898afbAA`](https://explorer-bradbury.genlayer.com/address/0xeB960bA5aDAF1F6A1DEBA19964B20434898afbAA), deployed by transaction [`0x94854d18ace9381ef3b07df8fabcf607dd33282c9ee9d2d99b3d53e6cb1f09f8`](https://explorer-bradbury.genlayer.com/tx/0x94854d18ace9381ef3b07df8fabcf607dd33282c9ee9d2d99b3d53e6cb1f09f8). The deployed source is `13,379` UTF-8 bytes with SHA-256 `4f580d60d0a0b972f711c84d04cbbe8ae00d4ced0f4d3b4773286498c3df1a12`.
+**Verified Bradbury deployment:** contract [`0xA4d5575aC2c91E1aE44B6246b1654148e56fa31c`](https://explorer-bradbury.genlayer.com/address/0xA4d5575aC2c91E1aE44B6246b1654148e56fa31c), deployed by transaction [`0x2fc3cb7597e3491b16e42308f1ddcfac639d5f3925f91016f7ef1d70f75c3d0d`](https://explorer-bradbury.genlayer.com/tx/0x2fc3cb7597e3491b16e42308f1ddcfac639d5f3925f91016f7ef1d70f75c3d0d). The deployed source is `13,685` UTF-8 bytes with SHA-256 `9dcdb2035299a3e537afde0dfc3389176de0090adeb11c46140f254f016e8faa`.
 
 ## Lifecycle correction
 
@@ -23,6 +23,19 @@ open --resolve(YES/NO)--> resolved --settle--> settled --claim--> paid
 ```
 
 The contract records the question and rules hashes, resolution history, source provenance through the consensus prompt, dispute rounds, positions, claims, and payout information. Web pages and dispute text are treated as untrusted data, never as instructions.
+
+
+## Live proof (resolve() guard + retryable UNRESOLVED, Bradbury)
+
+Dedicated proof market deployed from the exact same `contracts/prediction_market.py` to demonstrate the reviewer-requested lifecycle guard on-chain, independent of the canonical submission deployment above.
+
+- Proof contract: `0xBaACbcA084194912C26d65e0405B1275F1d4A750`
+- deploy: `0x64aff8201c5c52900eb1e0fbf4dad8433fbc2c1aac56a64988df851b1dc52a3d`
+- resolve #1 (creator) -> UNRESOLVED, market stays `open`: `0x4a65943a12ca6aa2046ed781e3b65dd51a85fa761d742da896b5ef6887820cae`
+- resolve #2 (creator, retry) -> UNRESOLVED again, still `open`: `0x56c31b7152943ad0353b83f0e56c467a7f03355b2e68cf3c0ae4c86333bf6398`
+- resolve (non-creator) -> reverts, 5/5 validators AGREE on FINISHED_WITH_ERROR: `0xbb5a2f4ef5c12cfe4e5e639040eaba27b7b37ae3616116b9ee21aa50acea1b88`
+
+Explorer: https://explorer-bradbury.genlayer.com/address/0xBaACbcA084194912C26d65e0405B1275F1d4A750
 
 ## Consensus design
 
