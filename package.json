@@ -1,0 +1,16 @@
+{
+  "name": "genlayer-prediction-market-contract",
+  "version": "1.0.0",
+  "description": "Contract-only GenLayer Intelligent Contract with creator-guarded, retryable prediction-market resolution",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "lint": "genvm-lint check contracts/prediction_market.py",
+    "simulate": "python3 sim_lifecycle.py",
+    "deploy": "node --env-file=.env deploy.mjs"
+  },
+  "dependencies": {
+    "genlayer-js": "^1.1.8",
+    "viem": "^2.55.18"
+  }
+}

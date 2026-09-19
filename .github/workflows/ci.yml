@@ -1,0 +1,86 @@
+name: Validate contract-only PredictionMarketResolver
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deploy this exact validated commit to GenLayer Bradbury"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install official GenVM linter
+        run: python -m pip install --upgrade genvm-linter
+      - name: Run GenVM lint and semantic validation
+        run: npm run lint
+      - name: Run lifecycle simulation
+        run: npm run simulate
+      - name: Compile contract
+        run: python -m py_compile contracts/prediction_market.py
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install JavaScript dependencies
+        run: npm ci
+      - name: Syntax-check deployment script
+        run: node --check deploy.mjs
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy == true
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact validated source
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install JavaScript dependencies
+        run: npm ci
+      - name: Deploy to Bradbury and record matching proof
+        env:
+          PRIVATE_KEY: ${{ secrets.GENLAYER_PRIVATE_KEY }}
+        run: |
+          test -n "$PRIVATE_KEY"
+          printf 'PRIVATE_KEY=%s\n' "$PRIVATE_KEY" > .env
+          trap 'rm -f .env' EXIT
+          node --env-file=.env deploy.mjs
+          test -s contract.txt
+          test -s deploy-tx.txt
+          test -s deployment-proof.txt
+          mkdir -p deployment-artifacts
+          cp contract.txt deploy-tx.txt deployment-proof.txt deployment-artifacts/
+          cp contracts/prediction_market.py deployment-artifacts/prediction_market.py
+          sha256sum contracts/prediction_market.py > deployment-artifacts/source-sha256.txt
+          cat deployment-proof.txt >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload matching deployment artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: prediction-market-contract-deployment-${{ github.sha }}
+          path: deployment-artifacts/
+          if-no-files-found: error
