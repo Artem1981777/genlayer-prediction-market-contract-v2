@@ -1,0 +1,11 @@
+PredictionMarketResolver contract-only deployment
+network: GenLayer Testnet Bradbury
+contract: 0xeB960bA5aDAF1F6A1DEBA19964B20434898afbAA
+deploy tx: 0x94854d18ace9381ef3b07df8fabcf607dd33282c9ee9d2d99b3d53e6cb1f09f8
+execution result: FINISHED_WITH_RETURN
+source file: contracts/prediction_market.py
+source bytes: 13379 UTF-8
+source sha256: 4f580d60d0a0b972f711c84d04cbbe8ae00d4ced0f4d3b4773286498c3df1a12
+explorer: https://explorer-bradbury.genlayer.com/address/0xeB960bA5aDAF1F6A1DEBA19964B20434898afbAA
+transaction explorer: https://explorer-bradbury.genlayer.com/tx/0x94854d18ace9381ef3b07df8fabcf607dd33282c9ee9d2d99b3d53e6cb1f09f8
+workflow: https://github.com/Artem1981777/genlayer-prediction-market-contract-v2/actions/runs/35456963938

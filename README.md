@@ -2,6 +2,8 @@
 
 `PredictionMarketResolver` is a standalone GenLayer Intelligent Contract for resolving a YES/NO prediction market from live web evidence and settling stakes through an on-chain lifecycle. This repository contains **only the contract and verification/deployment tooling**. It intentionally contains no user-facing `index.html`, frontend, or prediction-market application interface.
 
+**Verified Bradbury deployment:** contract [`0xeB960bA5aDAF1F6A1DEBA19964B20434898afbAA`](https://explorer-bradbury.genlayer.com/address/0xeB960bA5aDAF1F6A1DEBA19964B20434898afbAA), deployed by transaction [`0x94854d18ace9381ef3b07df8fabcf607dd33282c9ee9d2d99b3d53e6cb1f09f8`](https://explorer-bradbury.genlayer.com/tx/0x94854d18ace9381ef3b07df8fabcf607dd33282c9ee9d2d99b3d53e6cb1f09f8). The deployed source is `13,379` UTF-8 bytes with SHA-256 `4f580d60d0a0b972f711c84d04cbbe8ae00d4ced0f4d3b4773286498c3df1a12`.
+
 ## Lifecycle correction
 
 The resolver has two explicit protections required for safe lifecycle management:
